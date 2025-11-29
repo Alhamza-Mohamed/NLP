@@ -2,6 +2,8 @@ import re
 import string
 import numpy as np
 import nltk
+import matplotlib.pyplot as plt
+from matplotlib.patches import Ellipse
 from nltk.corpus import stopwords
 
 def process_tweet(tweet):
@@ -60,3 +62,57 @@ def build_freqs(tweets, ys):
                 freq[pair] = 1
 
     return freq
+
+def confidence_ellipse(x, y, ax, n_std=3.0, edgecolor='red', **kwargs):
+    """
+    Create a plot of the covariance confidence ellipse of *x* and *y*.
+
+    Parameters
+    ----------
+    x, y : 1D arrays
+        Input data.
+    ax : matplotlib.axes.Axes
+        The axes object to draw the ellipse into.
+    n_std : float
+        The number of standard deviations to determine the ellipse radius.
+    edgecolor : str
+        Color of the ellipse.
+    """
+    if x.size != y.size:
+        raise ValueError("x and y must be the same size")
+
+    # Compute covariance matrix
+    cov = np.cov(x, y)
+    pearson = cov[0, 1] / np.sqrt(cov[0, 0] * cov[1, 1])
+
+    # Ellipse radiuses
+    ell_radius_x = np.sqrt(1 + pearson)
+    ell_radius_y = np.sqrt(1 - pearson)
+
+    # Create ellipse
+    ellipse = Ellipse((0, 0),
+                      width=ell_radius_x * 2,
+                      height=ell_radius_y * 2,
+                      facecolor='none',
+                      edgecolor=edgecolor,
+                      **kwargs)
+
+    # Scale by standard deviation
+    scale_x = np.sqrt(cov[0, 0]) * n_std
+    scale_y = np.sqrt(cov[1, 1]) * n_std
+
+    # Mean of the data
+    mean_x = np.mean(x)
+    mean_y = np.mean(y)
+
+    transf = (
+        plt.matplotlib.transforms.Affine2D()
+        .rotate_deg(45)
+        .scale(scale_x, scale_y)
+        .translate(mean_x, mean_y)
+    )
+
+    ellipse.set_transform(transf + ax.transData)
+    ax.add_patch(ellipse)
+
+    return ellipse
